@@ -3,6 +3,7 @@ import threading
 import re
 
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
+connections = []  # 클라이언트 연결을 저장할 리스트
 
 # 수식을 파싱하고 계산하는 함수
 def calculate_expression(expression):
@@ -73,13 +74,11 @@ def start_server(host="127.0.0.1", port=9999):
     server.listen()
     print(f"[서버 시작] {host}:{port}에서 대기 중...")
 
-    while len(conn) < MAX_CLIENTS:
-        conn, addr = server.accept()
-        # conn.append((conn, addr))
-        print(f"클라이언트 연결 완료: {addr}")
-    
-    while True:
+    while len(connections) < MAX_CLIENTS:
         client_socket, addr = server.accept()
+        connections.append((client_socket, addr))  # 연결을 리스트에 추가
+        print(f"클라이언트 연결 완료: {addr}")
+
         client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
         client_handler.start()
 

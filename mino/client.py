@@ -1,5 +1,6 @@
 import socket
 import time
+import os
 
 # 서버에 연결하고 수식을 전송하는 클라이언트 함수
 def start_client(expression_file, host="127.0.0.1", port=9999):
@@ -26,5 +27,14 @@ def start_client(expression_file, host="127.0.0.1", port=9999):
         client.close()
 
 if __name__ == "__main__":
-    # 예시 파일 경로 (Expression 파일 사용)
-    start_client("/mnt/data/Expression1.txt")
+
+    path = os.path.dirname(os.path.abspath(__file__))
+    print(path)
+    expression_files = [
+        path+"\Expression1.txt",  # 첫 번째 클라이언트용 파일
+        path+ "\Expression2.txt",  # 두 번째 클라이언트용 파일
+        path+ "\Expression3.txt",  # 세 번째 클라이언트용 파일
+        path+ "\Expression4.txt"   # 네 번째 클라이언트용 파일
+    ]
+
+    start_client(expression_files[0])
