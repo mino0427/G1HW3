@@ -2,6 +2,8 @@ import socket
 import threading
 import re
 
+MAX_CLIENTS = 4  # 클라이언트 4개 대기
+
 # 수식을 파싱하고 계산하는 함수
 def calculate_expression(expression):
     def apply_operator(operators, values):
@@ -68,8 +70,13 @@ def handle_client(client_socket, address):
 def start_server(host="127.0.0.1", port=9999):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
-    server.listen(5)
+    server.listen()
     print(f"[서버 시작] {host}:{port}에서 대기 중...")
+
+    while len(conn) < MAX_CLIENTS:
+        conn, addr = server.accept()
+        # conn.append((conn, addr))
+        print(f"클라이언트 연결 완료: {addr}")
     
     while True:
         client_socket, addr = server.accept()
