@@ -135,6 +135,9 @@ def start_server(host="127.0.0.1", port=9999):
 
         client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
         client_handler.start()
+        
+        for client in clients:
+            client[0].send("FLAG:1\n".encode())
 
 if __name__ == "__main__":
     start_server()
