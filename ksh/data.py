@@ -1,10 +1,11 @@
 import socket
 import threading
 import re
+import queue
 
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
 clients = []  # 클라이언트 연결을 저장할 리스트
-waiting_list = []  # 수식을 저장할 대기 리스트 (최대 30개)
+waiting_queue = queue.Queue(30)  # 힙/공유 메모리를 기반으로 한 대기 리스트
 
 # 수식을 파싱하고 계산하는 함수
 def calculate_expression(expression):
@@ -58,30 +59,39 @@ def waiting():
                 if data:
                     print(f"[{address}] 수신된 수식: {data}")
                     
-                    # 대기 리스트가 가득 찬 경우 오류 메시지 전송
-                    if len(waiting_list) >= 30:
+                   # 대기 리스트가 가득 찬 경우 오류 메시지 전송
+                    if waiting_queue.full():
                         error_message = f"대기 리스트가 가득 찼습니다. 수식: {data}"
                         print(f"[오류] {error_message}")
                         client_socket.send(error_message.encode())
                     else:
                         # 대기 리스트에 수식 추가
-                        waiting_list.append((client_socket, address, data))
+                        waiting_queue.put((client_socket, address, data))
                         print(f"[{address}] 수식 대기 리스트에 추가됨: {data}")
                         
-                        # 수식을 꺼내서 계산 수행
-                        client_socket, address, expression = waiting_list.pop(0)
-                        print(f"[{address}] 계산할 수식: {expression}")
-                        result = calculate_expression(expression)
-                        print(f"[{address}] 계산 결과: {result}")
-                        
-                        # 계산 결과 반환
-                        client_socket.send(str(result).encode())
-                        
             except Exception as e:
-                print(f"[에러] {address}에서 수식을 처리하는 중 오류 발생: {e}")
+                print(f"[에러] {address}에서 수식을 수신하는 중 오류 발생: {e}")
                 clients.remove((client_socket, address))
                 client_socket.close()
 
+# 대기 리스트에서 수식을 처리하고 결과를 반환하는 management 스레드 함수
+def management():
+    print("[관리 스레드 시작] 대기 리스트에서 수식을 처리 중...")
+    while True:
+        if not waiting_queue.empty():
+            client_socket, address, expression = waiting_queue.get()  # 대기 리스트에서 수식 가져오기
+            print(f"[{address}] 계산할 수식: {expression}")
+            result = calculate_expression(expression)
+            print(f"[{address}] 계산 결과: {result}")
+            
+            # 계산 결과를 해당 클라이언트에게 반환
+            try:
+                client_socket.send(str(result).encode())
+            except Exception as e:
+                print(f"[에러] {address}로 결과 전송 중 오류 발생: {e}")
+                clients.remove((client_socket, address))
+                client_socket.close()
+                        
 # 클라이언트로부터 수신한 수식을 처리하고 결과를 반환하는 함수
 def handle_client(client_socket, address):
     print(f"[클라이언트 연결] {address} 연결됨.")
@@ -114,6 +124,10 @@ def start_server(host="127.0.0.1", port=9999):
     waiting_thread = threading.Thread(target=waiting, daemon=True)
     waiting_thread.start()
 
+    # 관리 스레드 시작
+    management_thread = threading.Thread(target=management, daemon=True)
+    management_thread.start()
+
     while len(clients) < MAX_CLIENTS:
         client_socket, addr = server.accept()
         clients.append((client_socket, addr))  # 연결을 리스트에 추가
@@ -121,6 +135,9 @@ def start_server(host="127.0.0.1", port=9999):
 
         client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
         client_handler.start()
+        
+        for client in clients:
+            client[0].send("FLAG:1\n".encode())
 
 if __name__ == "__main__":
     start_server()
