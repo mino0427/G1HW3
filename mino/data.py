@@ -2,6 +2,9 @@ import socket
 import threading
 import re
 
+host = "0.0.0.0"
+port = 9999
+
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
 connections = []  # 클라이언트 연결을 저장할 리스트
 
@@ -68,7 +71,7 @@ def handle_client(client_socket, address):
     client_socket.close()
 
 # 서버 실행
-def start_server(host="127.0.0.1", port=9999):
+def start_server(host, port):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((host, port))
     server.listen()
