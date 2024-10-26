@@ -32,9 +32,9 @@ if __name__ == "__main__":
     print(path)
     expression_files = [
         path+"\Expression1.txt",  # 첫 번째 클라이언트용 파일
-        path+ "\Expression2.txt",  # 두 번째 클라이언트용 파일
-        path+ "\Expression3.txt",  # 세 번째 클라이언트용 파일
-        path+ "\Expression4.txt"   # 네 번째 클라이언트용 파일
+        path+"\Expression2.txt",  # 두 번째 클라이언트용 파일
+        path+"\Expression3.txt",  # 세 번째 클라이언트용 파일
+        path+"\Expression4.txt"   # 네 번째 클라이언트용 파일
     ]
 
     start_client(expression_files[0])
