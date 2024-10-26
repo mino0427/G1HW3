@@ -2,11 +2,8 @@ import socket
 import time
 import os
 
-host = "127.0.0.1"
-port = 9999
-
 # 서버에 연결하고 수식을 전송하는 클라이언트 함수
-def start_client(expression_file, host, port):
+def start_client(expression_file, host="127.0.0.1", port=9999):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((host, port))
     print(f"[서버 연결] {host}:{port}에 연결됨.")
