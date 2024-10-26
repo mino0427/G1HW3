@@ -1,12 +1,21 @@
 import socket
 import time
 import os
+import threading
 
 # 서버에 연결하고 수식을 전송하는 클라이언트 함수
-def start_client(expression_file, host="127.0.0.1", port=9999):
+def start_client(host="127.0.0.1", port=9999):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((host, port))
     print(f"[서버 연결] {host}:{port}에 연결됨.")
+    
+    # 서버로부터 플래그 수신
+    flag_msg = client.recv(4096).decode().strip()
+    client_index = int(flag_msg.split(":")[1])  # FLAG:1, FLAG:2 등에서 숫자만 추출
+    
+    # 클라이언트 접속 순서에 맞는 파일 선택
+    path = os.path.dirname(os.path.abspath(__file__))
+    expression_file = path + f"/Expression{client_index}.txt"
     
     try:
         # 파일에서 수식 읽기
@@ -28,13 +37,4 @@ def start_client(expression_file, host="127.0.0.1", port=9999):
 
 if __name__ == "__main__":
 
-    path = os.path.dirname(os.path.abspath(__file__))
-    print(path)
-    expression_files = [
-        path+"\Expression1.txt",  # 첫 번째 클라이언트용 파일
-        path+"\Expression2.txt",  # 두 번째 클라이언트용 파일
-        path+"\Expression3.txt",  # 세 번째 클라이언트용 파일
-        path+"\Expression4.txt"   # 네 번째 클라이언트용 파일
-    ]
-
-    start_client(expression_files[0])
+    start_client()
