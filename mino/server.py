@@ -2,12 +2,14 @@ import socket
 import threading
 import re
 import queue
+import os
 
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
 clients = []  # 클라이언트 연결을 저장할 리스트
 waiting_queue = queue.Queue(30)  # 힙/공유 메모리를 기반으로 한 대기 리스트
 calc_queue = queue.Queue()  # 계산 요청 큐
 result_queue = queue.Queue()  # 계산 결과 큐
+exit_count = 0
 
 # 파싱 트리를 위한 노드 클래스
 class Node:
@@ -72,6 +74,8 @@ def calculate_expression(expression):
 
 # 하나의 스레드에서 대기 리스트 관리 및 계산 수행
 def waiting():
+    global exit_count
+
     print("[대기 스레드 시작] 클라이언트로부터 수식을 대기 중...")
     while True:
         for client_socket, address in clients:
@@ -79,6 +83,19 @@ def waiting():
                 # 클라이언트로부터 수식 수신
                 data = client_socket.recv(1024).decode()
                 if data:
+                    if data == "EXIT":
+                        print(f"[종료 요청] {address}에서 연결 종료 요청 수신")
+                        clients.remove((client_socket, address))
+                        client_socket.close()
+                        exit_count += 1
+                        print(f"[연결 종료] {address}와의 연결이 종료됨. 종료 수신 수: {exit_count}")
+
+                        # 모든 클라이언트가 종료 요청을 보낸 경우 서버 종료
+                        if exit_count >= MAX_CLIENTS:
+                            print("[서버 종료] 모든 클라이언트로부터 종료 요청을 수신하여 서버를 종료합니다.")
+                            os._exit(0)  # 서버 종료
+                        continue
+
                     print(f"[{address}] 수신된 수식: {data}")
                     
                    # 대기 리스트가 가득 찬 경우 오류 메시지 전송
