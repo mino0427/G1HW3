@@ -6,6 +6,8 @@ import queue
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
 clients = []  # 클라이언트 연결을 저장할 리스트
 waiting_queue = queue.Queue(30)  # 힙/공유 메모리를 기반으로 한 대기 리스트
+calc_queue = queue.Queue()  # 계산 요청 큐
+result_queue = queue.Queue()  # 계산 결과 큐
 
 # 수식을 파싱하고 계산하는 함수
 def calculate_expression(expression):
@@ -81,16 +83,26 @@ def management():
         if not waiting_queue.empty():
             client_socket, address, expression = waiting_queue.get()  # 대기 리스트에서 수식 가져오기
             print(f"[{address}] 계산할 수식: {expression}")
-            result = calculate_expression(expression)
-            print(f"[{address}] 계산 결과: {result}")
+            calc_queue.put((client_socket, address, expression))  # 계산 요청을 calc_queue에 넣음
+            waiting_queue.task_done()
             
-            # 계산 결과를 해당 클라이언트에게 반환
-            try:
-                client_socket.send(str(result).encode())
-            except Exception as e:
-                print(f"[에러] {address}로 결과 전송 중 오류 발생: {e}")
-                clients.remove((client_socket, address))
-                client_socket.close()
+             # result_queue에서 계산 결과 수신
+            if not result_queue.empty():
+                client_socket, address, result = result_queue.get()
+                try:
+                    client_socket.send(str(result).encode())  # 클라이언트에 결과 전송
+                    print(f"[{address}] 계산 결과 전송: {result}")
+                except Exception as e:
+                    print(f"[에러] {address}로 결과 전송 중 오류 발생: {e}")
+                result_queue.task_done()
+
+# 계산 작업을 수행하는 calc 스레드 함수
+def calc():
+    while True:
+        client_socket, address, expression = calc_queue.get()  # 계산할 데이터 수신
+        result = calculate_expression(expression)  # 계산 수행
+        result_queue.put((client_socket, address, result))  # 결과를 result_queue에 넣음
+        calc_queue.task_done()
 
 # 서버 실행
 def start_server(host="127.0.0.1", port=9999):
@@ -112,7 +124,18 @@ def start_server(host="127.0.0.1", port=9999):
 
     # 관리 스레드 시작
     management_thread = threading.Thread(target=management, daemon=True)
-    management_thread.start()       
+    management_thread.start() 
+
+    # 200개의 calc 스레드를 생성하고, 스레드 리스트에 추가하여 join 가능하도록 설정
+    calc_threads = []
+    for _ in range(200):
+        thread = threading.Thread(target=calc, daemon=True)
+        thread.start()
+        calc_threads.append(thread)
+
+    # 200개의 calc 스레드 생성
+    for _ in range(200):
+        threading.Thread(target=calc, daemon=True).start()      
 
     for client in clients:# 접속 순서에 따라 FLAG 전송
         client[0].send(f"FLAG:{client_id}\n".encode())
@@ -120,6 +143,8 @@ def start_server(host="127.0.0.1", port=9999):
     
     waiting_thread.join()
     management_thread.join()
-    
+    for thread in calc_threads:
+        thread.join()
+
 if __name__ == "__main__":
     start_server()
