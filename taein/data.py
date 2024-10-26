@@ -47,8 +47,8 @@ def calculate_expression(expression):
     return values[0]
 
 # 클라이언트로부터 수신한 수식을 처리하고 결과를 반환하는 함수
-def handle_client(client_socket, address, client_id):
-    print(f"[클라이언트 연결] {address} 연결됨. 클라이언트 ID: {client_id}")
+def handle_client(client_socket, address):
+    print(f"[클라이언트 연결] {address} 연결됨.")
     try:
 
         # 클라이언트와의 통신 (연산 결과 전송)

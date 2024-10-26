@@ -8,16 +8,15 @@ def start_client(host="127.0.0.1", port=9999):
     client.connect((host, port))
     print(f"[서버 연결] {host}:{port}에 연결됨.")
     
-    flag_msg = client.recv(4096).decode()
-    if flag_msg == "FLAG:1\n":
+    # 서버로부터 플래그 수신
+    flag_msg = client.recv(4096).decode().strip()
+    client_id = int(flag_msg.split(":")[1])  # FLAG:1, FLAG:2 등에서 숫자만 추출
+    # 클라이언트 접속 순서에 맞는 파일 선택
+    path = os.path.dirname(os.path.abspath(__file__))
+    expression_file = path + f"/Expression{client_id}.txt"
 
-        # 서버로부터 플래그 수신
-        flag_msg = client.recv(4096).decode().strip()
-        client_id = int(flag_msg.split(":")[1])  # FLAG:1, FLAG:2 등에서 숫자만 추출
-        # 클라이언트 접속 순서에 맞는 파일 선택
-        path = os.path.dirname(os.path.abspath(__file__))
-        expression_file = path + f"/Expression{client_id}.txt"
-    
+    if client_id>0 :
+
         try:
             # 파일에서 수식 읽기
             with open(expression_file, 'r') as file:
