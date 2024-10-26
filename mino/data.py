@@ -2,7 +2,7 @@ import socket
 import threading
 import re
 
-MAX_CLIENTS = 4  # 클라이언트 4개 대기
+MAX_CLIENTS = 4
 connections = []  # 클라이언트 연결을 저장할 리스트
 
 # 수식을 파싱하고 계산하는 함수
