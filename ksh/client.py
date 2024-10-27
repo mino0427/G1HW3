@@ -16,7 +16,8 @@ def send_expressions(client, expression_file, send_cnt, log_file):
                     log_file.write(f"[{send_cnt}번 수식 전송]: {expression}\n")
                     print(f"[{send_cnt}번 수식 전송]:{expression}")
                     client.send(expression.encode())
-                    time.sleep(0.5)  # 전송 간격 조절
+
+                    time.sleep(0.1)  # 전송 간격 조절
     except Exception as e:
         log_file.write(f"[전송 오류] {e}\n")
         print(f"[전송 오류] {e}")
@@ -37,14 +38,14 @@ def receive_results(client, received_cnt, log_file):
                 log_file.write(f"[재전송] {expression}\n")
                 print("[오류] 큐가 가득참")
                 print(f"[재전송] {expression}")
-                time.sleep(0.5)
+                time.sleep(0.1)
                 client.send(expression.encode())  # 수식 재전송
             else:
                 # 정상 결과 수신
                 received_cnt += 1
                 log_file.write(f"[{received_cnt}번 결과 수신]: {result}\n")
                 print(f"[{received_cnt}번 결과 수신]:{result}")
-                time.sleep(0.5)
+                time.sleep(0.1)
 
                 # 결과 수신 완료 후 서버에 종료 신호 전송
         if received_cnt >= MAX_RESULTS:

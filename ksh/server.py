@@ -84,41 +84,41 @@ def waiting(received_cnt,log_file):
                 data = client_socket.recv(1024).decode()
                 if data:
                     if data == "EXIT":
-                        log_file.write(f"[종료 요청] {address}에서 연결 종료 요청 수신")
+                        log_file.write(f"[종료 요청] {address}에서 연결 종료 요청 수신\n")
                         print(f"[종료 요청] {address}에서 연결 종료 요청 수신")
                         clients.remove((client_socket, address))
                         client_socket.close()
                         exit_count += 1
-                        log_file.write(f"[연결 종료] {address}와의 연결이 종료됨. 종료 수신 수: {exit_count}")
+                        log_file.write(f"[연결 종료] {address}와의 연결이 종료됨. 종료 수신 수: {exit_count}\n")
                         print(f"[연결 종료] {address}와의 연결이 종료됨. 종료 수신 수: {exit_count}")
 
                         # 모든 클라이언트가 종료 요청을 보낸 경우 서버 종료
                         if exit_count >= MAX_CLIENTS:
-                            log_file.write("[서버 종료] 모든 클라이언트로부터 종료 요청을 수신하여 서버를 종료합니다.")
+                            log_file.write("[서버 종료] 모든 클라이언트로부터 종료 요청을 수신하여 서버를 종료합니다.\n")
                             print("[서버 종료] 모든 클라이언트로부터 종료 요청을 수신하여 서버를 종료합니다.")
                             os._exit(0)  # 서버 종료
                         continue
                     
-                    log_file.write(f"[{address}] 수신된 수식: {data}")
+                    log_file.write(f"[{address}] 수신된 수식: {data}\n")
                     print(f"[{address}] 수신된 수식: {data}")
                     received_cnt+=1
-                    log_file.write(f"현재 {received_cnt}개 수신")
+                    log_file.write(f"현재 {received_cnt}개 수신\n")
                     print(f"현재 {received_cnt}개 수신")
-                    
-                   # 대기 리스트가 가득 찬 경우 오류 메시지 전송
+
+                    # 대기 리스트가 가득 찬 경우 오류 메시지 전송
                     if waiting_queue.full():
                         error_message = f"FAILED: {data}"
-                        log_file.write(f"[오류] {error_message}")
+                        log_file.write(f"[오류] {error_message}\n")
                         print(f"[오류] {error_message}")
                         client_socket.send(error_message.encode())
                     else:
                         # 대기 리스트에 수식 추가
                         waiting_queue.put((client_socket, address, data))
-                        log_file.write(f"[{address}] 수식 대기 리스트에 추가됨: {data}")
+                        log_file.write(f"[{address}] 수식 대기 리스트에 추가됨: {data}\n")
                         print(f"[{address}] 수식 대기 리스트에 추가됨: {data}")
                         
             except Exception as e:
-                log_file.write(f"[에러] {address}에서 수식을 수신하는 중 오류 발생: {e}")
+                log_file.write(f"[에러] {address}에서 수식을 수신하는 중 오류 발생: {e}\n")
                 print(f"[에러] {address}에서 수식을 수신하는 중 오류 발생: {e}")
                 clients.remove((client_socket, address))
                 client_socket.close()
@@ -129,7 +129,7 @@ def management(log_file):
     while True:
         if not waiting_queue.empty():
             client_socket, address, expression = waiting_queue.get()  # 대기 리스트에서 수식 가져오기
-            log_file.write(f"[{address}] 계산할 수식: {expression}")
+            log_file.write(f"[{address}] 계산할 수식: {expression}\n")
             print(f"[{address}] 계산할 수식: {expression}")
             calc_queue.put((client_socket, address, expression))  # 계산 요청을 calc_queue에 넣음
             waiting_queue.task_done()
@@ -139,10 +139,10 @@ def management(log_file):
                 client_socket, address, result = result_queue.get()
                 try:
                     client_socket.send(str(result).encode())  # 클라이언트에 결과 전송
-                    log_file.write(f"[{address}] 계산 결과 전송: {result}")
+                    log_file.write(f"[{address}] 계산 결과 전송: {result}\n")
                     print(f"[{address}] 계산 결과 전송: {result}")
                 except Exception as e:
-                    log_file.write(f"[에러] {address}로 결과 전송 중 오류 발생: {e}")
+                    log_file.write(f"[에러] {address}로 결과 전송 중 오류 발생: {e}\n")
                     print(f"[에러] {address}로 결과 전송 중 오류 발생: {e}")
                 result_queue.task_done()
 
@@ -152,7 +152,7 @@ def calc(calc_cnt,log_file):
     while True:
         client_socket, address, expression = calc_queue.get()  # 계산할 데이터 수신
         result = calculate_expression(expression)  # 계산 수행
-        log_file.write(f"[{address}] 계산 수행 완료: {expression} = {result}")
+        log_file.write(f"[{address}] 계산 수행 완료: {expression} = {result}\n")
         print(f"[{address}] 계산 수행 완료: {expression} = {result}")
         result_queue.put((client_socket, address, result))  # 결과를 result_queue에 넣음
         calc_queue.task_done()
@@ -166,14 +166,14 @@ def start_server(host="127.0.0.1", port=9999):
 
     # 서버 로그 파일 생성
     log_file_path = f"Server.txt"
-    log_file = open(log_file_path, 'w')  # 로그 파일 직접 열기
+    log_file = open(log_file_path, 'w', encoding='utf-8')  # 로그 파일 직접 열기
     log_file.write(f"[로그 시작] Server.txt\n")
 
     client_id = 1
     while len(clients) < MAX_CLIENTS:
         client_socket, addr = server.accept()
         clients.append((client_socket, addr))  # 연결을 리스트에 추가
-        log_file.write(f"클라이언트 연결 완료: {addr}")
+        log_file.write(f"클라이언트 연결 완료: {addr}\n")
         print(f"클라이언트 연결 완료: {addr}")
 
     received_cnt = 0
