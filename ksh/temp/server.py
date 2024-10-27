@@ -2,80 +2,56 @@ import socket
 import threading
 import re
 import queue
-import os
 
 MAX_CLIENTS = 4  # 클라이언트 4개 대기
 clients = []  # 클라이언트 연결을 저장할 리스트
 waiting_queue = queue.Queue(30)  # 힙/공유 메모리를 기반으로 한 대기 리스트
 calc_queue = queue.Queue()  # 계산 요청 큐
 result_queue = queue.Queue()  # 계산 결과 큐
-exit_count = 0
 
-# 파싱 트리를 위한 노드 클래스
-class Node:
-    def __init__(self, value):
-        self.value = value
-        self.left = None
-        self.right = None
-
-# 파싱 트리로 수식을 계산하는 함수
+# 수식을 파싱하고 계산하는 함수
 def calculate_expression(expression):
-    def build_tree(tokens):
-        precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
-        operators = []
-        operands = []
+    def apply_operator(operators, values):
+        operator = operators.pop()
+        right = values.pop()
+        left = values.pop()
+        if operator == '+':
+            values.append(left + right)
+        elif operator == '-':
+            values.append(left - right)
+        elif operator == '*':
+            values.append(left * right)
+        elif operator == '/':
+            values.append(left / right)
 
-        for token in tokens:
-            if token.isdigit():  # 숫자인 경우
-                operands.append(Node(int(token)))
-            elif token in precedence:  # 연산자인 경우
-                while (operators and operators[-1].value in precedence and
-                       precedence[operators[-1].value] >= precedence[token]):
-                    operator = operators.pop()
-                    operator.right = operands.pop()
-                    operator.left = operands.pop()
-                    operands.append(operator)
-                operators.append(Node(token))
-            elif token == '(':
-                operators.append(Node(token))
-            elif token == ')':
-                while operators[-1].value != '(':
-                    operator = operators.pop()
-                    operator.right = operands.pop()
-                    operator.left = operands.pop()
-                    operands.append(operator)
-                operators.pop()
-
-        while operators:
-            operator = operators.pop()
-            operator.right = operands.pop()
-            operator.left = operands.pop()
-            operands.append(operator)
-
-        return operands[0]  # 루트 노드 반환
-
-    def evaluate(node):
-        if isinstance(node.value, int):
-            return node.value
-        left_val = evaluate(node.left)
-        right_val = evaluate(node.right)
-        if node.value == '+':
-            return left_val + right_val
-        elif node.value == '-':
-            return left_val - right_val
-        elif node.value == '*':
-            return left_val * right_val
-        elif node.value == '/':
-            return left_val / right_val
+    precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
+    operators = []
+    values = []
 
     tokens = re.findall(r'\d+|[+*/()-]', expression)
-    root = build_tree(tokens)
-    return evaluate(root)
+
+    for token in tokens:
+        if token.isdigit():
+            values.append(int(token))
+        elif token in precedence:
+            while (operators and operators[-1] in precedence and
+                   precedence[operators[-1]] >= precedence[token]):
+                apply_operator(operators, values)
+            operators.append(token)
+        elif token == '(':
+            operators.append(token)
+        elif token == ')':
+            while operators[-1] != '(':
+                apply_operator(operators, values)
+            operators.pop()
+
+    while operators:
+        apply_operator(operators, values)
+
+    return values[0]
 
 # 하나의 스레드에서 대기 리스트 관리 및 계산 수행
 def waiting():
-    global exit_count
-
     print("[대기 스레드 시작] 클라이언트로부터 수식을 대기 중...")
     while True:
         for client_socket, address in clients:
@@ -83,19 +59,6 @@ def waiting():
                 # 클라이언트로부터 수식 수신
                 data = client_socket.recv(1024).decode()
                 if data:
-                    if data == "EXIT":
-                        print(f"[종료 요청] {address}에서 연결 종료 요청 수신")
-                        clients.remove((client_socket, address))
-                        client_socket.close()
-                        exit_count += 1
-                        print(f"[연결 종료] {address}와의 연결이 종료됨. 종료 수신 수: {exit_count}")
-
-                        # 모든 클라이언트가 종료 요청을 보낸 경우 서버 종료
-                        if exit_count >= MAX_CLIENTS:
-                            print("[서버 종료] 모든 클라이언트로부터 종료 요청을 수신하여 서버를 종료합니다.")
-                            os._exit(0)  # 서버 종료
-                        continue
-
                     print(f"[{address}] 수신된 수식: {data}")
                     
                    # 대기 리스트가 가득 찬 경우 오류 메시지 전송
@@ -134,8 +97,7 @@ def management():
                 result_queue.task_done()
 
 # 계산 작업을 수행하는 calc 스레드 함수
-def calc(calc_cnt):
-    print(f"[계산 스레드 시작] {calc_cnt}번 calc 생성 중...")
+def calc():
     while True:
         client_socket, address, expression = calc_queue.get()  # 계산할 데이터 수신
         result = calculate_expression(expression)  # 계산 수행
@@ -148,6 +110,7 @@ def start_server(host="127.0.0.1", port=9999):
     server.bind((host, port))
     server.listen()
     print(f"[서버 시작] {host}:{port}에서 대기 중...")
+
 
     client_id = 1
     while len(clients) < MAX_CLIENTS:
@@ -165,12 +128,14 @@ def start_server(host="127.0.0.1", port=9999):
 
     # 200개의 calc 스레드를 생성하고, 스레드 리스트에 추가하여 join 가능하도록 설정
     calc_threads = []
-    calc_cnt = 0
     for _ in range(200):
-        calc_cnt+=1
-        thread = threading.Thread(target=calc, args=(calc_cnt,))
+        thread = threading.Thread(target=calc, daemon=True)
         thread.start()
-        calc_threads.append(thread)      
+        calc_threads.append(thread)
+
+    # 200개의 calc 스레드 생성
+    for _ in range(200):
+        threading.Thread(target=calc, daemon=True).start()      
 
     for client in clients:# 접속 순서에 따라 FLAG 전송
         client[0].send(f"FLAG:{client_id}\n".encode())
