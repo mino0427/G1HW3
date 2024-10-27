@@ -2,22 +2,35 @@ import socket
 import time
 import os
 import threading
+import queue
 
 MAX_RESULTS = 1000
+failed_queue = queue.Queue()
 
 # 수식을 서버에 전송하는 함수
 def send_expressions(client, expression_file, send_cnt, log_file):
     try:
         with open(expression_file, 'r') as file:
-            for line in file:
-                expression = line.strip()
-                if expression:
+            expressions = file.readlines()
+            while send_cnt < MAX_RESULTS:
+                 # 재전송 요청이 있는 경우 큐에서 꺼내어 다시 전송
+                if not failed_queue.empty():
+                    send_cnt = failed_queue.get() - 1
+                    expression = expressions[send_cnt].strip()
+                    message = f"SEND:{send_cnt+1}:{expression}"
+                    log_file.write(f"[재전송] {send_cnt+1}번 수식 전송: {expression}\n")
+                    print(f"[재전송] {send_cnt+1}번 수식 전송: {expression}")
+                    client.send(message.encode())
+                else:
+                    # 일반 전송 처리
+                    expression = expressions[send_cnt].strip()
+                    if expression:
+                        message = f"SEND:{send_cnt+1}:{expression}"
+                        log_file.write(f"[{send_cnt+1}번 수식 전송]: {expression}\n")
+                        print(f"[{send_cnt+1}번 수식 전송]: {expression}")
+                        client.send(message.encode())
+                        time.sleep(0.1)  # 전송 간격 조절
                     send_cnt+=1
-                    log_file.write(f"[{send_cnt}번 수식 전송]: {expression}\n")
-                    print(f"[{send_cnt}번 수식 전송]:{expression}")
-                    client.send(expression.encode())
-
-                    time.sleep(0.1)  # 전송 간격 조절
     except Exception as e:
         log_file.write(f"[전송 오류] {e}\n")
         print(f"[전송 오류] {e}")
@@ -25,26 +38,30 @@ def send_expressions(client, expression_file, send_cnt, log_file):
 # 서버로부터 결과를 수신하는 함수
 def receive_results(client, received_cnt, log_file):
     try:
+        buffer = ""  # 수신한 메시지를 임시로 저장할 버퍼
         # while True:
         while received_cnt < MAX_RESULTS:
             result = client.recv(1024).decode()
             if not result:
                 break  # 서버 연결이 종료된 경우 루프 탈출
             
-            # 실패 메시지 확인 및 재요청 처리
-            if result.startswith("FAILED:"):
-                expression = result.split(":")[1]  # 실패한 수식 추출
-                log_file.write("[오류] 큐가 가득참\n")
-                log_file.write(f"[재전송] {expression}\n")
-                print("[오류] 큐가 가득참")
-                print(f"[재전송] {expression}")
-                time.sleep(0.1)
-                client.send(expression.encode())  # 수식 재전송
-            else:
-                # 정상 결과 수신
-                received_cnt += 1
-                log_file.write(f"[{received_cnt}번 결과 수신]: {result}\n")
-                print(f"[{received_cnt}번 결과 수신]:{result}")
+            buffer += result
+            messages = buffer.split("\n")  # \n 기준으로 메시지 분리
+            buffer = messages.pop()  # 마지막 요소를 버퍼로 남겨둠 (완전하지 않은 메시지일 수 있음)
+
+            for result in messages:
+                # 실패 메시지 확인 및 재요청 처리
+                if result.startswith("FAILED:"):
+                    parts = result.split(":")
+                    failed_count = int(parts[1])  # 순번 추출
+                    failed_queue.put(failed_count)  # 재전송 요청
+                    log_file.write(f"[오류] 누락된 데이터 재전송 요청 (순번: {failed_count})\n")
+                    print(f"[오류] 누락된 데이터 재전송 요청 (순번: {failed_count})")
+                else:
+                    # 정상 결과 수신
+                    received_cnt += 1
+                    log_file.write(f"[{received_cnt}번 결과 수신]: {result}\n")
+                    print(f"[{received_cnt}번 결과 수신]:{result}")
                 time.sleep(0.1)
 
                 # 결과 수신 완료 후 서버에 종료 신호 전송

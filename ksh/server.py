@@ -75,14 +75,16 @@ def calculate_expression(expression):
 # 하나의 스레드에서 대기 리스트 관리 및 계산 수행
 def waiting(received_cnt,log_file):
     global exit_count
-
     print("[대기 스레드 시작] 클라이언트로부터 수식을 대기 중...")
+    received_counts = {}  # 클라이언트별로 수신된 순번을 추적하는 딕셔너리
+
     while True:
         for client_socket, address in clients:
             try:
                 # 클라이언트로부터 수식 수신
                 data = client_socket.recv(1024).decode()
                 if data:
+                    # 종료 요청 처리
                     if data == "EXIT":
                         log_file.write(f"[종료 요청] {address}에서 연결 종료 요청 수신\n")
                         print(f"[종료 요청] {address}에서 연결 종료 요청 수신")
@@ -99,23 +101,44 @@ def waiting(received_cnt,log_file):
                             os._exit(0)  # 서버 종료
                         continue
                     
-                    log_file.write(f"[{address}] 수신된 수식: {data}\n")
-                    print(f"[{address}] 수신된 수식: {data}")
-                    received_cnt+=1
-                    log_file.write(f"현재 {received_cnt}개 수신\n")
-                    print(f"현재 {received_cnt}개 수신")
+                    # 데이터가 'SEND:순번:수식' 형식인지 확인하고 파싱
+                    if data.startswith("SEND:"):
+                        parts = data.split(":", 2)
+                        if len(parts) == 3:
+                            _, count_str, expression = parts
+                            count = int(count_str)
 
-                    # 대기 리스트가 가득 찬 경우 오류 메시지 전송
-                    if waiting_queue.full():
-                        error_message = f"FAILED: {data}"
-                        log_file.write(f"[오류] {error_message}\n")
-                        print(f"[오류] {error_message}")
-                        client_socket.send(error_message.encode())
-                    else:
-                        # 대기 리스트에 수식 추가
-                        waiting_queue.put((client_socket, address, data))
-                        log_file.write(f"[{address}] 수식 대기 리스트에 추가됨: {data}\n")
-                        print(f"[{address}] 수식 대기 리스트에 추가됨: {data}")
+                            # 클라이언트별로 수신된 순번을 기록
+                            if address not in received_counts:
+                                received_counts[address] = set()
+                            received_counts[address].add(count)
+
+                            log_file.write(f"[{address}] 수신된 수식: {expression} (순번: {count})\n")
+                            print(f"[{address}] 수신된 수식: {expression} (순번: {count})")
+
+                            # 누락된 순번 확인 및 클라이언트에 알림
+                            expected_count = len(received_counts[address])
+                            if count != expected_count:
+                                missing_message = f"FAILED:{count}:{expression}\n"
+                                client_socket.send(missing_message.encode())  # 누락된 수식 전체 재요청
+                                log_file.write(f"[경고] {address}에서 순번 {expected_count} 누락됨, 재전송 요청\n")
+                                print(f"[경고] {address}에서 순번 {expected_count} 누락됨, 재전송 요청")
+
+                            received_cnt += 1
+                            log_file.write(f"현재 {received_cnt}개 수신\n")
+                            print(f"현재 {received_cnt}개 수신")
+
+                            # 대기 리스트가 가득 찬 경우 오류 메시지 전송
+                            if waiting_queue.full():
+                                error_message = f"FAILED:{count}:{expression}\n"
+                                log_file.write(f"[오류] 대기 리스트 가득참, {error_message}\n")
+                                print(f"[오류] 대기 리스트 가득참, {error_message}")
+                                client_socket.send(error_message.encode())
+                            else:
+                                # 대기 리스트에 수식 추가
+                                waiting_queue.put((client_socket, address, expression))
+                                log_file.write(f"[{address}] 수식 대기 리스트에 추가됨: {expression}\n")
+                                print(f"[{address}] 수식 대기 리스트에 추가됨: {expression}")
                         
             except Exception as e:
                 log_file.write(f"[에러] {address}에서 수식을 수신하는 중 오류 발생: {e}\n")
