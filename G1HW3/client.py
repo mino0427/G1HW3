@@ -29,7 +29,7 @@ def send_expressions(client, expression_file, send_cnt, log_file):
                         log_file.write(f"[{send_cnt[0]+1}번 수식 전송]: {expression}\n")
                         print(f"[{send_cnt[0]+1}번 수식 전송]: {expression}")
                         client.send((message + "\n").encode())
-                        time.sleep(0.1)  # 전송 간격 조절
+                        time.sleep(0.01)  # 전송 간격 조절
                     send_cnt[0] += 1
     except Exception as e:
         log_file.write(f"[전송 오류] {e}\n")
@@ -65,7 +65,7 @@ def receive_results(client, received_cnt, log_file):
                     received_cnt[0] += 1
                     log_file.write(f"[{received_cnt[0]}번 결과 수신]: {result}\n")
                     print(f"[{received_cnt[0]}번 결과 수신]: {result}")
-                time.sleep(0.1)
+                time.sleep(0.01)
 
         if received_cnt[0] >= MAX_RESULTS:
             client.send("EXIT\n".encode())
@@ -77,7 +77,7 @@ def receive_results(client, received_cnt, log_file):
         print(f"[수신 오류] {e}")
 
 # 서버에 연결하고 수식을 전송하는 클라이언트 함수
-def start_client(host="34.68.170.234", port=9999):
+def start_client(host="127.0.0.1", port=9999):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((host, port))
     print(f"[서버 연결] {host}:{port}에 연결됨.")
