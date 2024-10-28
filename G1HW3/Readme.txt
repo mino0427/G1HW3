@@ -8,7 +8,7 @@
 
 
 
-1. 프로그램 구성요소 : data.py, client.py
+1. 프로그램 구성요소 : server.py, client.py
 
 ◆ data.py 구성요소
 ①
@@ -50,18 +50,20 @@
 	source myenv/bin/activate //가상환경 활성화
 
 ⑥ UPLOAD FILE을 클릭하여 server.py를 업로드한다.
-	server.py가 업로드된 디렉터리에서 python3 data.py로 Data server를 실행한다.
+	server.py가 업로드된 디렉터리에서 python3 server.py로 server를 실행한다.
 
-⑦ 로컬에서 powershell 터미널 6개를 열어 터미널 2개는 python3 cache.py로 캐시 서버를 실행시키고, 나머지 터미널 4개는 python3 client.py로 client를 실행한다. (vscode에서 실행해도 됨)
+⑦ 로컬에서 powershell 터미널 4개를 열어 python3 client.py로 client 4개를 실행한다. (vscode 터미널에서 실행해도 됨)
 	
-⑧ 2개의 Cache server와 4개의 client가 모두 연결되면 프로그램이 실행된다.
+⑧ server에 4개의 client가 모두 연결되면 프로그램이 실행된다.
 
-☆주의할 점 : 
-
+☆주의할 점 : client의 host 정의가 자신이 사용하는 외부주소로 되어있는지 확인한다
 
 
 3. 프로그램 실행환경 및 실행방법 설명
-
+(실행방법 - 2번 참고)
+외부 서버 - 구글 클라우드 (파이썬 3.11.2버전)
+로컬 실행 환경 - 프로세서 12th Gen Intel(R) Core(TM) i5-12500H 2.50 GHz
+RAM 16GB, 64bit 운영체제, x64기반 프로세서
 
 4. 서버의 thread 관리 및 작업 대기 리스트의 선정 알고리즘에 대한 설명 작성
 
