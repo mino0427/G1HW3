@@ -27,8 +27,7 @@ Readme 작성
 
 ④ 클라이언트와 통신
 waiting():
--클라이언트로 부터 "EXIT" 메시지를 받으면 exit_count++
-	-exit_count==4이면 Server 종료
+-클라이언트로 부터 "EXIT" 메시지를 받으면 exit_count++, exit_count==4이면 Server 종료한다
 -"SEND" 메시지를 받으면 클라이언트 별로 수식의 순번을 기록
 	-누락된 순번 확인 및 클라이언트에게 알림
 	-누락된 순번이 없으면 정상적으로 waiting_queue에 추가
