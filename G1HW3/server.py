@@ -86,7 +86,7 @@ def calculate_expression(expression):
         return f"Error: {str(e)}"
 
 # 클라이언트로부터 데이터를 수신하는 함수
-def handle_client(client_socket, address, log_file):
+def waiting(client_socket, address, log_file):
     global exit_count
     received_cnt = 0
     received_counts = set()  # 수신된 순번을 추적하는 집합
@@ -209,7 +209,7 @@ def start_server(host="0.0.0.0", port=9999):
         print(f"클라이언트 연결 완료: {addr}")
 
         # 각 클라이언트에 대한 핸들러 스레드 시작
-        client_thread = threading.Thread(target=handle_client, args=(client_socket, addr, log_file))
+        client_thread = threading.Thread(target=waiting, args=(client_socket, addr, log_file))
         client_thread.start()
 
     for client in clients:

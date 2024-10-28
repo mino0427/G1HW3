@@ -4,13 +4,13 @@
 
 20203058 남태인 - 
 
-20203072 안민호 – 
-
+20203072 안민호 – 절대 경로로 텍스트 파일읽어내기, 파싱트리 코딩, 오류 해결,
+Readme 작성
 
 
 1. 프로그램 구성요소 : server.py, client.py
 
-◆ data.py 구성요소
+◆ server.py 구성요소
 ①
 ②
 ③
@@ -22,6 +22,9 @@
 ② 
 ③
 ④
+
+
+
 
 2. 소스코드 컴파일 방법 (GCP 사용)
 
@@ -59,11 +62,16 @@
 ☆주의할 점 : client의 host 정의가 자신이 사용하는 외부주소로 되어있는지 확인한다
 
 
+
 3. 프로그램 실행환경 및 실행방법 설명
 (실행방법 - 2번 참고)
-외부 서버 - 구글 클라우드 (파이썬 3.11.2버전)
+외부 서버 - 구글 클라우드 (파이썬 3.11.2버전, 0.25-2 vCPU (1 shared core)
+		메모리 1GB, Boot disk size 20GB, interface type: SCSI
 로컬 실행 환경 - 프로세서 12th Gen Intel(R) Core(TM) i5-12500H 2.50 GHz
-RAM 16GB, 64bit 운영체제, x64기반 프로세서
+		      RAM 16GB, 64bit 운영체제, x64기반 프로세서
+
+
+
 
 4. 서버의 thread 관리 및 작업 대기 리스트의 선정 알고리즘에 대한 설명 작성
 
@@ -72,14 +80,14 @@ RAM 16GB, 64bit 운영체제, x64기반 프로세서
 5. Error or Additional Message Handling
 ▶ Additional Message Handling
 
-⊙ Data Server
+⊙ Server
 ① 
 ⊙ Client
 ①
 
 ▶ Error Handling (Exception 처리 포함)
 
-⊙ Data Server
+⊙ Server
 ①
 
 ⊙ Client
@@ -90,3 +98,14 @@ RAM 16GB, 64bit 운영체제, x64기반 프로세서
 6. Additional Comments (팀플 날짜 기록)
 2024/10/24
 과제 시작
+알고리즘 작성
+소켓 연결
+
+2024/10/25
+수식텍스트 파일 읽기
+계산 코드 작성
+
+2024/10/26 ~ 10/28
+파싱트리
+서버 코드 작성(thread들 구현)
+오류 검출 및 무한 디버깅 -> 해결
